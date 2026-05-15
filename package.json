@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Simple AI video generator with Instagram Reels publishing and a Vercel dashboard.",
   "scripts": {
+    "build": "node -e \"console.log('No build step needed')\"",
     "check": "node src/check.js",
     "dev": "vercel dev",
     "generate": "node src/run.js",
