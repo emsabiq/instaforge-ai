@@ -1,4 +1,5 @@
 import { config } from "./config.js";
+import { assertChildSafePrompt, fallbackChildrenPlan, NARA_CHARACTER } from "./storyboard.js";
 
 function timeoutSignal(ms) {
   const controller = new AbortController();
@@ -27,7 +28,11 @@ function jsonFromText(text) {
   return JSON.parse(body);
 }
 
-function fallbackPlan({ prompt, mood, durationSeconds }) {
+function fallbackPlan({ prompt, mood, durationSeconds, audience }) {
+  if (audience === "children") {
+    return normalizePlan(fallbackChildrenPlan({ prompt, mood, durationSeconds }), durationSeconds, audience);
+  }
+
   const title = "Mulai Dari Satu Langkah";
   return normalizePlan({
     title,
@@ -39,14 +44,20 @@ function fallbackPlan({ prompt, mood, durationSeconds }) {
       { text: "Pilih satu hal yang bisa kamu lakukan hari ini, lalu ulangi besok.", color: "0x0f766e" },
       { text: "Bukan harus sempurna. Yang penting, mulai dan jangan hilang dari proses.", color: "0x312e81" }
     ],
-    mood
-  }, durationSeconds);
+    mood,
+    audience
+  }, durationSeconds, audience);
 }
 
-function normalizePlan(plan, durationSeconds) {
+function normalizePlan(plan, durationSeconds, audience = "general") {
   const scenes = Array.isArray(plan?.scenes) && plan.scenes.length ? plan.scenes : [];
   const safeScenes = scenes.slice(0, 6).map((scene, index) => ({
     text: String(scene?.text || scene?.line || "").trim() || `Scene ${index + 1}`,
+    visual_prompt: String(scene?.visual_prompt || scene?.visual || scene?.image_prompt || scene?.text || "").trim(),
+    action: String(scene?.action || "").trim(),
+    camera: String(scene?.camera || "").trim(),
+    narration: String(scene?.narration || scene?.voiceover || "").trim(),
+    duration: Number(scene?.duration || scene?.duration_seconds || 0) || 0,
     color: normalizeColor(scene?.color, index)
   }));
 
@@ -60,8 +71,21 @@ function normalizePlan(plan, durationSeconds) {
   return {
     title: String(plan?.title || "InstaForge AI").trim().slice(0, 90),
     caption: String(plan?.caption || "").trim().slice(0, 2100),
+    audience,
+    mood: String(plan?.mood || "").trim(),
+    character: audience === "children" ? normalizeCharacter(plan?.character) : plan?.character || null,
     scenes: safeScenes,
     durationSeconds
+  };
+}
+
+function normalizeCharacter(character) {
+  if (!character || typeof character !== "object") return NARA_CHARACTER;
+  return {
+    name: String(character.name || NARA_CHARACTER.name).trim(),
+    age: String(character.age || NARA_CHARACTER.age).trim(),
+    description: String(character.description || NARA_CHARACTER.description).trim(),
+    style: String(character.style || NARA_CHARACTER.style).trim()
   };
 }
 
@@ -71,14 +95,51 @@ function normalizeColor(value, index) {
   return /^0x[0-9a-f]{6}$/i.test(text) ? text : palette[index % palette.length];
 }
 
-export async function generateVideoPlan({ prompt, mood = "clean", durationSeconds = 24 }) {
+export async function generateVideoPlan({ prompt, mood = "clean", durationSeconds = 24, audience = "general" }) {
   const safePrompt = String(prompt || "").trim();
   if (!safePrompt) throw new Error("Prompt video wajib diisi.");
+  const safeAudience = audience === "children" ? "children" : "general";
+  if (safeAudience === "children") assertChildSafePrompt(safePrompt);
+
   if (!config.openai.apiKey) {
-    return fallbackPlan({ prompt: safePrompt, mood, durationSeconds });
+    return fallbackPlan({ prompt: safePrompt, mood, durationSeconds, audience: safeAudience });
   }
 
-  const systemPrompt = `
+  const systemPrompt = safeAudience === "children" ? `
+Buat storyboard video anak-anak dalam bahasa Indonesia.
+Balas hanya JSON valid tanpa markdown.
+Format:
+{
+  "title": "judul pendek",
+  "caption": "caption pendek dengan 3-5 hashtag",
+  "character": {
+    "name": "Nara",
+    "age": "7",
+    "description": "deskripsi karakter konsisten",
+    "style": "gaya visual konsisten"
+  },
+  "scenes": [
+    {
+      "text": "overlay maksimal 10 kata",
+      "visual_prompt": "deskripsi visual bahasa Inggris yang detail",
+      "action": "aksi sederhana dan aman",
+      "camera": "gerakan kamera sederhana",
+      "narration": "narasi bahasa Indonesia satu kalimat",
+      "duration": 3,
+      "color": "0x101820"
+    }
+  ]
+}
+Aturan:
+- Buat 5 scene untuk total sekitar ${durationSeconds} detik.
+- Karakter wajib konsisten: ${NARA_CHARACTER.description}.
+- Gaya visual wajib konsisten: ${NARA_CHARACTER.style}.
+- Tema harus aman untuk anak: tidak horor, tidak kekerasan, tidak bahaya, tidak dewasa, tidak tokoh nyata, tidak karakter berhak cipta.
+- Cerita harus punya nilai: berbagi, jujur, berani baik, atau rasa ingin tahu.
+- Visual prompt jangan meminta teks, logo, watermark, subtitle, atau UI di video.
+- Gaya: ${mood}.
+Prompt user: ${safePrompt}
+`.trim() : `
 Buat konsep video Reels vertikal dalam bahasa Indonesia.
 Balas hanya JSON valid tanpa markdown.
 Format:
@@ -127,10 +188,10 @@ Prompt user: ${safePrompt}
     if (!response.ok) {
       throw new Error(data?.error?.message || `OpenAI request failed: ${response.status}`);
     }
-    return normalizePlan(jsonFromText(outputTextFromOpenAi(data)), durationSeconds);
+    return normalizePlan(jsonFromText(outputTextFromOpenAi(data)), durationSeconds, safeAudience);
   } catch (error) {
     console.warn(`OpenAI plan gagal, memakai fallback lokal: ${error.message}`);
-    return fallbackPlan({ prompt: safePrompt, mood, durationSeconds });
+    return fallbackPlan({ prompt: safePrompt, mood, durationSeconds, audience: safeAudience });
   } finally {
     timeout.clear();
   }

@@ -17,12 +17,15 @@ export default async function handler(req, res) {
     const prompt = clean(body.prompt);
     if (!prompt) throw new Error("Prompt video wajib diisi.");
 
-    const duration = String(Math.max(12, Math.min(60, Number(body.duration_seconds || 24) || 24)));
+    const duration = String(Math.max(12, Math.min(60, Number(body.duration_seconds || 15) || 15)));
     const inputs = {
       prompt,
       mood: clean(body.mood || "clean"),
+      engine: clean(body.engine || "replicate"),
+      audience: clean(body.audience || "children"),
+      aspect_ratio: clean(body.aspect_ratio || "16:9"),
       duration_seconds: duration,
-      publish: body.publish === false || body.publish === "false" ? "false" : "true"
+      publish: body.publish === true || body.publish === "true" ? "true" : "false"
     };
 
     const dispatch = await dispatchWorkflow(inputs);
@@ -48,4 +51,3 @@ export default async function handler(req, res) {
     sendJson(res, 400, { error: error.message });
   }
 }
-

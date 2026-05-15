@@ -2,7 +2,8 @@ import path from "node:path";
 import { config, canPublish, shouldUploadToRemote } from "./config.js";
 import { ensureDirs, appendHistory, saveJson } from "./storage.js";
 import { generateVideoPlan } from "./ai.js";
-import { renderVideo } from "./renderer.js";
+import { renderVideo as renderLocalVideo } from "./renderer.js";
+import { renderReplicateVideo } from "./replicate-renderer.js";
 import { uploadFiles, validatePublicUrl } from "./uploader.js";
 import { publishReel } from "./instagram.js";
 
@@ -24,6 +25,23 @@ function stripSourceCredit(caption) {
     .trim();
 }
 
+function normalizeEngine(value) {
+  const engine = String(value || config.video.engine || "ffmpeg").trim().toLowerCase();
+  return engine === "replicate" ? "replicate" : "ffmpeg";
+}
+
+function normalizeAudience(value) {
+  const audience = String(value || config.video.audience || "general").trim().toLowerCase();
+  return audience === "children" ? "children" : "general";
+}
+
+function normalizeAspect(value) {
+  const aspect = String(value || config.video.aspectRatio || "9:16").trim().toLowerCase();
+  if (["landscape", "wide", "16x9", "16:9"].includes(aspect)) return "16:9";
+  if (["square", "1x1", "1:1"].includes(aspect)) return "1:1";
+  return "9:16";
+}
+
 export async function runWorkflow(options = {}) {
   await ensureDirs();
 
@@ -31,18 +49,26 @@ export async function runWorkflow(options = {}) {
   const durationSeconds = normalizeDuration(options.durationSeconds);
   const prompt = String(options.prompt || "").trim();
   const mood = String(options.mood || "clean").trim() || "clean";
+  const engine = normalizeEngine(options.engine);
+  const audience = normalizeAudience(options.audience);
+  const aspectRatio = normalizeAspect(options.aspectRatio || options.aspect_ratio);
   if (!prompt) throw new Error("Prompt video wajib diisi.");
 
   console.log("JOB:", jobId);
   console.log("PROMPT:", prompt);
   console.log("MOOD:", mood);
   console.log("DURATION:", durationSeconds);
+  console.log("ENGINE:", engine);
+  console.log("AUDIENCE:", audience);
+  console.log("ASPECT:", aspectRatio);
   console.log("PUBLISH REQUESTED:", Boolean(options.publish));
 
-  const plan = await generateVideoPlan({ prompt, mood, durationSeconds });
+  const plan = await generateVideoPlan({ prompt, mood, durationSeconds, audience });
   console.log("AI TITLE:", plan.title);
 
-  const render = await renderVideo({ jobId, plan, durationSeconds });
+  const render = engine === "replicate"
+    ? await renderReplicateVideo({ jobId, plan, durationSeconds, aspectRatio })
+    : await renderLocalVideo({ jobId, plan, durationSeconds });
   console.log("VIDEO RENDERED:", render.videoPath);
 
   const metadata = {
@@ -51,9 +77,16 @@ export async function runWorkflow(options = {}) {
     status: "rendered",
     prompt,
     mood,
+    engine,
+    audience,
+    aspect_ratio: aspectRatio,
     title: plan.title,
     caption: plan.caption,
+    character: plan.character,
     scenes: plan.scenes,
+    replicate_model: render.model || "",
+    replicate_source_url: render.sourceUrl || "",
+    replicate_input: render.replicateInput || null,
     video_path: render.videoPath,
     thumbnail_path: render.thumbnailPath,
     duration_seconds: render.durationSeconds,
@@ -98,6 +131,9 @@ export async function runWorkflow(options = {}) {
   const result = {
     status,
     job_id: jobId,
+    engine,
+    audience,
+    aspect_ratio: aspectRatio,
     title: plan.title,
     caption: plan.caption,
     video_path: path.relative(config.rootDir, render.videoPath),
@@ -122,4 +158,3 @@ export async function runWorkflow(options = {}) {
   console.log("RESULT:", JSON.stringify(result, null, 2));
   return result;
 }
-

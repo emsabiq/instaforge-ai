@@ -40,6 +40,11 @@ function numberEnvFrom(names, fallback) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function allowedEnv(name, allowed, fallback) {
+  const value = clean(process.env[name]).toLowerCase();
+  return allowed.includes(value) ? value : fallback;
+}
+
 function remoteConfig() {
   const driver = clean(process.env.UPLOAD_DRIVER || "sftp").toLowerCase();
   const prefix = driver === "sftp" ? "SFTP" : "FTP";
@@ -70,6 +75,7 @@ function remoteConfig() {
 function buildConfig() {
   const width = numberEnv("VIDEO_WIDTH", 1080);
   const height = numberEnv("VIDEO_HEIGHT", 1920);
+  const aspectRatio = clean(process.env.VIDEO_ASPECT_RATIO || "9:16");
 
   return {
     appName: "InstaForge AI",
@@ -100,7 +106,20 @@ function buildConfig() {
       temperature: numberEnv("OPENAI_TEMPERATURE", 0.45),
       requestTimeoutMs: numberEnv("AI_REQUEST_TIMEOUT_SECONDS", 40) * 1000
     },
+    replicate: {
+      apiKey: process.env.REPLICATE_API_TOKEN || "",
+      model: clean(process.env.REPLICATE_VIDEO_MODEL || "lightricks/ltx-2.3-fast"),
+      timeoutMs: numberEnv("REPLICATE_TIMEOUT_SECONDS", 900) * 1000,
+      fps: numberEnv("REPLICATE_VIDEO_FPS", 24),
+      resolution: clean(process.env.REPLICATE_VIDEO_RESOLUTION || "1080p"),
+      cameraMotion: clean(process.env.REPLICATE_CAMERA_MOTION || "dolly_in"),
+      generateAudio: boolEnv("REPLICATE_GENERATE_AUDIO", false),
+      seed: clean(process.env.REPLICATE_SEED)
+    },
     video: {
+      engine: allowedEnv("VIDEO_ENGINE", ["ffmpeg", "replicate"], "ffmpeg"),
+      audience: allowedEnv("VIDEO_AUDIENCE", ["general", "children"], "general"),
+      aspectRatio,
       width,
       height,
       fps: numberEnv("VIDEO_FPS", 30),
@@ -150,4 +169,3 @@ export function publicThumbnailUrl(filename) {
 export function publicMetadataUrl(filename) {
   return publicGeneratedUrl("metadata", filename);
 }
-

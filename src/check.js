@@ -27,16 +27,22 @@ function remoteMissing() {
 const ffmpegOk = await commandExists("ffmpeg");
 const ffprobeOk = await commandExists("ffprobe");
 const missingRemote = remoteMissing();
+const publishInput = String(process.env.PUBLISH || "").toLowerCase();
+const publishRequested = config.autoPublish && !config.dryRun && !["false", "0", "no", "off"].includes(publishInput);
+const replicateEngine = config.video.engine === "replicate";
+const remoteRequired = shouldUploadToRemote() || config.remoteUploadRequired || publishRequested;
 
 const checks = [
-  check("OPENAI_API_KEY", Boolean(config.openai.apiKey), "dibutuhkan untuk rencana video AI"),
-  check("PUBLIC_BASE_URL", Boolean(config.publicBaseUrl), config.publicBaseUrl),
-  check("Remote storage", !missingRemote.length, missingRemote.length ? `missing: ${missingRemote.join(", ")}` : config.ftp.label),
-  check("Instagram user", Boolean(config.instagram.igUserId), "INSTAGRAM_IG_USER_ID"),
-  check("Instagram token", Boolean(config.instagram.accessToken), "INSTAGRAM_ACCESS_TOKEN"),
+  check("OPENAI_API_KEY", Boolean(config.openai.apiKey), config.openai.apiKey ? "rencana AI aktif" : "fallback storyboard lokal", false),
+  check("REPLICATE_API_TOKEN", !replicateEngine || Boolean(config.replicate.apiKey), replicateEngine ? config.replicate.model : "tidak dipakai"),
+  check("PUBLIC_BASE_URL", !remoteRequired || Boolean(config.publicBaseUrl), config.publicBaseUrl || "tidak wajib untuk local"),
+  check("Remote storage", !remoteRequired || !missingRemote.length, missingRemote.length ? `missing: ${missingRemote.join(", ")}` : config.ftp.label),
+  check("Instagram user", !publishRequested || Boolean(config.instagram.igUserId), "INSTAGRAM_IG_USER_ID"),
+  check("Instagram token", !publishRequested || Boolean(config.instagram.accessToken), "INSTAGRAM_ACCESS_TOKEN"),
   check("FFmpeg", ffmpegOk, "render MP4"),
   check("FFprobe", ffprobeOk, "validasi media"),
-  check("Auto publish", config.autoPublish && !config.dryRun, config.dryRun ? "DRY_RUN=true" : "AUTO_PUBLISH=true", false)
+  check("Video engine", true, `${config.video.engine} / ${config.video.aspectRatio} / ${config.video.audience}`, false),
+  check("Auto publish", publishRequested, publishRequested ? "publish requested" : "publish off", false)
 ];
 
 for (const item of checks) {

@@ -23,6 +23,8 @@ export default async function handler(req, res) {
       check("PUBLIC_BASE_URL", Boolean(cfg.publicBaseUrl), cfg.publicBaseUrl),
       check("Remote storage", remoteMissing.length === 0, remoteMissing.length ? `missing env: ${remoteMissing.join(", ")}` : cfg.uploadDriver),
       check("OpenAI API", Boolean(clean(process.env.OPENAI_API_KEY)), cfg.openaiModel),
+      check("Replicate API", Boolean(clean(process.env.REPLICATE_API_TOKEN)), cfg.replicateModel, false),
+      check("Video engine", true, `${cfg.videoEngine} / ${cfg.videoAspectRatio} / ${cfg.videoAudience}`, false),
       check("Instagram ID", Boolean(clean(process.env.INSTAGRAM_IG_USER_ID)), "INSTAGRAM_IG_USER_ID"),
       check("Instagram token", Boolean(clean(process.env.INSTAGRAM_ACCESS_TOKEN)), "INSTAGRAM_ACCESS_TOKEN"),
       check("Meta App Secret", Boolean(clean(process.env.META_APP_ID) && clean(process.env.META_APP_SECRET)), "untuk refresh token", false),
@@ -35,4 +37,3 @@ export default async function handler(req, res) {
     sendJson(res, 500, { error: error.message });
   }
 }
-

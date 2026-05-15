@@ -75,9 +75,11 @@ function renderConfig(cfg) {
   const parts = [
     cfg.dryRun ? "dry-run" : "live",
     cfg.autoPublish ? "publish on" : "publish off",
+    cfg.videoEngine || "ffmpeg",
+    cfg.videoAspectRatio || "9:16",
+    cfg.videoAudience || "general",
     `storage ${(cfg.uploadDriver || "sftp").toUpperCase()}`,
-    "Instagram only",
-    cfg.openaiModel || "OpenAI"
+    cfg.replicateReady ? "Replicate ready" : cfg.openaiModel || "OpenAI"
   ];
   els.configLine.textContent = parts.join(" / ");
 }
@@ -87,7 +89,7 @@ function renderMetrics(cfg, activeRun, runs) {
   const lastOk = latest?.conclusion === "success";
   els.metricGrid.innerHTML = [
     metric("Mode", cfg.dryRun ? "Dry" : "Live", cfg.autoPublish ? "auto publish" : "manual", cfg.dryRun ? "warn" : "ok"),
-    metric("Instagram", cfg.instagramEnabled ? "On" : "Off", cfg.graphApiVersion || "Graph", cfg.instagramEnabled ? "ok" : "bad"),
+    metric("Replicate", cfg.replicateReady ? "Ready" : "Missing", cfg.replicateModel || "LTX", cfg.replicateReady ? "ok" : "warn"),
     metric("Workflow", activeRun?.status || "Idle", cfg.workflowFile || "-", activeRun?.status === "running" ? "info" : "ok"),
     metric("Run terakhir", latest ? latest.conclusion || latest.status : "-", latest ? formatDateTime(latest.created_at) : "belum ada", lastOk ? "ok" : "warn")
   ].join("");
@@ -316,4 +318,3 @@ function escapeHtml(value) {
 function escapeAttr(value) {
   return escapeHtml(value).replace(/`/g, "&#96;");
 }
-

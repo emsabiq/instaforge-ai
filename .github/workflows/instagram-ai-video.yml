@@ -6,19 +6,31 @@ name: Instagram AI Video
       prompt:
         description: Prompt atau ide video
         required: true
-        default: "Buat video motivasi singkat tentang mulai dari langkah kecil."
+        default: "Nara belajar berbagi buah dengan teman-temannya di taman."
       mood:
         description: Gaya video
         required: false
-        default: "clean"
+        default: "educational"
+      engine:
+        description: "Engine video: replicate/ffmpeg"
+        required: false
+        default: "replicate"
+      audience:
+        description: "Audience: children/general"
+        required: false
+        default: "children"
+      aspect_ratio:
+        description: "Format video: 16:9/9:16/1:1"
+        required: false
+        default: "16:9"
       duration_seconds:
         description: Durasi video dalam detik
         required: false
-        default: "24"
+        default: "15"
       publish:
         description: "Publish ke Instagram: true/false"
         required: false
-        default: "true"
+        default: "false"
 
 concurrency:
   group: instagram-ai-video
@@ -39,9 +51,9 @@ jobs:
       APP_TIMEZONE: Asia/Jakarta
       DRY_RUN: "false"
       AUTO_PUBLISH: "true"
-      UPLOAD_DRIVER: ${{ secrets.UPLOAD_DRIVER }}
-      PUBLIC_BASE_URL: ${{ secrets.PUBLIC_BASE_URL }}
-      REMOTE_UPLOAD_REQUIRED: "true"
+      UPLOAD_DRIVER: ${{ github.event.inputs.publish == 'true' && secrets.UPLOAD_DRIVER || 'local' }}
+      PUBLIC_BASE_URL: ${{ github.event.inputs.publish == 'true' && secrets.PUBLIC_BASE_URL || '' }}
+      REMOTE_UPLOAD_REQUIRED: ${{ github.event.inputs.publish == 'true' && 'true' || 'false' }}
 
       GRAPH_API_VERSION: ${{ secrets.GRAPH_API_VERSION }}
       INSTAGRAM_UPLOAD_ENABLED: "true"
@@ -61,6 +73,15 @@ jobs:
       OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
       OPENAI_TEMPERATURE: ${{ secrets.OPENAI_TEMPERATURE }}
       AI_REQUEST_TIMEOUT_SECONDS: ${{ secrets.AI_REQUEST_TIMEOUT_SECONDS }}
+
+      REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+      REPLICATE_VIDEO_MODEL: ${{ secrets.REPLICATE_VIDEO_MODEL }}
+      REPLICATE_VIDEO_RESOLUTION: ${{ secrets.REPLICATE_VIDEO_RESOLUTION }}
+      REPLICATE_VIDEO_FPS: ${{ secrets.REPLICATE_VIDEO_FPS }}
+      REPLICATE_CAMERA_MOTION: ${{ secrets.REPLICATE_CAMERA_MOTION }}
+      REPLICATE_GENERATE_AUDIO: ${{ secrets.REPLICATE_GENERATE_AUDIO }}
+      REPLICATE_TIMEOUT_SECONDS: ${{ secrets.REPLICATE_TIMEOUT_SECONDS }}
+      REPLICATE_SEED: ${{ secrets.REPLICATE_SEED }}
 
       SFTP_HOST: ${{ secrets.SFTP_HOST }}
       SFTP_PORT: ${{ secrets.SFTP_PORT }}
@@ -89,6 +110,9 @@ jobs:
       VIDEO_WIDTH: "1080"
       VIDEO_HEIGHT: "1920"
       VIDEO_FPS: "30"
+      VIDEO_ENGINE: ${{ github.event.inputs.engine }}
+      VIDEO_AUDIENCE: ${{ github.event.inputs.audience }}
+      VIDEO_ASPECT_RATIO: ${{ github.event.inputs.aspect_ratio }}
       VIDEO_RENDER_CRF: ${{ secrets.VIDEO_RENDER_CRF }}
       VIDEO_RENDER_PRESET: ${{ secrets.VIDEO_RENDER_PRESET }}
 
@@ -130,18 +154,43 @@ jobs:
         run: npm ci
 
       - name: Check configuration
+        env:
+          PUBLISH: ${{ github.event.inputs.publish }}
         run: npm run check
 
-      - name: Generate and publish Instagram Reel
+      - name: Generate AI video
         env:
           PROMPT: ${{ github.event.inputs.prompt }}
           MOOD: ${{ github.event.inputs.mood }}
+          ENGINE: ${{ github.event.inputs.engine }}
+          AUDIENCE: ${{ github.event.inputs.audience }}
+          ASPECT_RATIO: ${{ github.event.inputs.aspect_ratio }}
           DURATION_SECONDS: ${{ github.event.inputs.duration_seconds }}
           PUBLISH: ${{ github.event.inputs.publish }}
         shell: bash
         run: |
           args=(--prompt "$PROMPT" --mood "$MOOD" --duration "$DURATION_SECONDS")
+          if [ -n "$ENGINE" ]; then
+            args+=(--engine "$ENGINE")
+          fi
+          if [ -n "$AUDIENCE" ]; then
+            args+=(--audience "$AUDIENCE")
+          fi
+          if [ -n "$ASPECT_RATIO" ]; then
+            args+=(--aspect "$ASPECT_RATIO")
+          fi
           if [ "$PUBLISH" = "true" ] || [ "$PUBLISH" = "1" ]; then
             args+=(--publish)
           fi
           node src/run.js "${args[@]}"
+
+      - name: Upload generated video artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instaforge-generated-video
+          path: |
+            generated/videos/*.mp4
+            generated/thumbnails/*.jpg
+            generated/metadata/*.json
+          if-no-files-found: ignore
