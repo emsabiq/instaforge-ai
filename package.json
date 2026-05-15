@@ -1,0 +1,20 @@
+{
+  "name": "instaforge-ai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Simple AI video generator with Instagram Reels publishing and a Vercel dashboard.",
+  "scripts": {
+    "check": "node src/check.js",
+    "dev": "vercel dev",
+    "generate": "node src/run.js",
+    "run": "node src/run.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "basic-ftp": "^5.3.1",
+    "dotenv": "^16.4.7",
+    "ssh2-sftp-client": "^12.1.1"
+  },
+  "devDependencies": {}
+}
