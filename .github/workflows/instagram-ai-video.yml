@@ -16,7 +16,7 @@ name: Instagram AI Video
         required: false
         default: "24"
       publish:
-        description: Publish ke Instagram: true/false
+        description: "Publish ke Instagram: true/false"
         required: false
         default: "true"
 
