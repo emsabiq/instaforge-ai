@@ -1,0 +1,18 @@
+{
+  "userId": "7723304444",
+  "projectId": "tg-7723304444-1779252663984",
+  "baseImageTelegramFileId": null,
+  "baseImageLocalPath": null,
+  "frame1Path": null,
+  "frame2Path": null,
+  "lastEndFramePath": null,
+  "prompt": null,
+  "status": "new",
+  "createdAt": "2026-05-20T04:51:03.984Z",
+  "updatedAt": "2026-05-20T04:51:03.984Z",
+  "frame1Instruction": null,
+  "frame2Instruction": null,
+  "outputVideoPath": null,
+  "firstFramePath": null,
+  "lastError": null
+}
