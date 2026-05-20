@@ -34,14 +34,34 @@ jobs:
         with:
           node-version: "22"
           cache: npm
+          cache-dependency-path: package-lock.json
 
-      - name: Install FFmpeg
+      - name: Detect Telegram command
+        id: telegram_command
+        env:
+          TELEGRAM_UPDATE: ${{ inputs.telegram_update }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          node - <<'NODE'
+          const update = JSON.parse(process.env.TELEGRAM_UPDATE || "{}");
+          const message = update.message || update.edited_message || {};
+          const text = String(message.text || message.caption || "").trim();
+          const command = text ? text.split(/\s+/)[0].split("@")[0].toLowerCase() : "";
+          console.log(`command=${command || "<photo-or-empty>"}`);
+          require("node:fs").appendFileSync(process.env.GITHUB_OUTPUT, `command=${command}\n`);
+          NODE
+
+      - name: Ensure FFmpeg
+        if: steps.telegram_command.outputs.command == '/generate'
+        run: |
+          if command -v ffmpeg >/dev/null 2>&1; then
+            ffmpeg -version | head -n 1
+          else
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Typecheck
         run: npm run typecheck
