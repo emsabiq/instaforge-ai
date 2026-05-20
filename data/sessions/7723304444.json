@@ -9,10 +9,10 @@
   "prompt": null,
   "status": "error",
   "createdAt": "2026-05-20T04:51:03.984Z",
-  "updatedAt": "2026-05-20T05:43:56.277Z",
+  "updatedAt": "2026-05-20T07:05:36.013Z",
   "frame1Instruction": "tentara sedang melihat peta di hutan, realitis, cinematic, detail wajah tetap mirip foto asli",
   "frame2Instruction": null,
   "outputVideoPath": null,
   "firstFramePath": null,
-  "lastError": "Request failed with status code 401"
+  "lastError": "Request failed with status code 401 | HTTP 401 Unauthorized | Response: {\"message\":\"Unauthorized: The provided API key is invalid. Please verify your API key at https://www.magnific.com/developers/dashboard/api-key. If you need a new key, you can request one at https://www.magnific.com/api.\"}"
 }
