@@ -3,16 +3,16 @@
   "projectId": "tg-7723304444-1779252663984",
   "baseImageTelegramFileId": "AgACAgUAAxkBAAMiag1Bcbc_wo5rlezISI6pWT4MsYkAAnsPaxvkkGlU5j9cqoaxJ5gBAAMCAAN5AAM7BA",
   "baseImageLocalPath": "generated/tg-7723304444-1779252663984/inputs/base.jpg",
-  "frame1Path": null,
+  "frame1Path": "https://cdn-magnific.freepik.com/result_SEEDREAM_5_0_EDIT_a9cce4f5-5d38-4f1c-b093-3afc9d46ee16_0.jpeg?token=exp=1779265400~hmac=2868ac3abf9afa33efafce9368173820c7b925edc11dd7b75cd777f18e32198d&size=stable",
   "frame2Path": null,
   "lastEndFramePath": null,
   "prompt": null,
   "status": "error",
   "createdAt": "2026-05-20T04:51:03.984Z",
-  "updatedAt": "2026-05-20T07:05:36.013Z",
+  "updatedAt": "2026-05-20T07:23:31.238Z",
   "frame1Instruction": "tentara sedang melihat peta di hutan, realitis, cinematic, detail wajah tetap mirip foto asli",
   "frame2Instruction": null,
   "outputVideoPath": null,
   "firstFramePath": null,
-  "lastError": "Request failed with status code 401 | HTTP 401 Unauthorized | Response: {\"message\":\"Unauthorized: The provided API key is invalid. Please verify your API key at https://www.magnific.com/developers/dashboard/api-key. If you need a new key, you can request one at https://www.magnific.com/api.\"}"
+  "lastError": "Request failed with status code 400 | HTTP 400 Bad Request | Response: {\"ok\":false,\"error_code\":400,\"description\":\"Bad Request: IMAGE_PROCESS_FAILED\"}"
 }
