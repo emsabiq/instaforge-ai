@@ -6,13 +6,13 @@
   "frame1Path": "https://ai.emsa.pro/telegram-ai-frame/tg-7723304444-1779252663984/frame1.jpg",
   "frame2Path": "https://cdn-magnific.freepik.com/result_SEEDREAM_5_0_EDIT_cf794b3e-20cf-47f4-9b61-df1c7567ced7_0.jpeg?token=exp=1779269723~hmac=5ef9eedf23011b12070eb82ae03631638c676134e47e4380aba0f7f485cfcbe4&size=stable",
   "lastEndFramePath": null,
-  "prompt": null,
-  "status": "frame2_ready",
+  "prompt": "kamera tracking shot pelan, karakter berjalan maju, suasana tegang, realistis, durasi 8 detik",
+  "status": "prompt_ready",
   "createdAt": "2026-05-20T04:51:03.984Z",
-  "updatedAt": "2026-05-20T08:35:54.701Z",
+  "updatedAt": "2026-05-20T08:37:02.524Z",
   "frame1Instruction": "tentara sedang melihat peta di hutan, realistis, cinematic, detail wajah tetap mirip foto asli",
   "frame2Instruction": "tentara berdiri di sungai saat senja, realistis, cinematic",
   "outputVideoPath": null,
   "firstFramePath": null,
-  "lastError": "SFTP: getConnection: Timed out while waiting for handshake"
+  "lastError": null
 }
