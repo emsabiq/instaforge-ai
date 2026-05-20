@@ -7,12 +7,12 @@
   "frame2Path": null,
   "lastEndFramePath": null,
   "prompt": null,
-  "status": "error",
+  "status": "frame1_ready",
   "createdAt": "2026-05-20T04:51:03.984Z",
   "updatedAt": "2026-05-20T07:46:17.535Z",
   "frame1Instruction": "tentara sedang melihat peta di hutan, realitis, cinematic, detail wajah tetap mirip foto asli",
   "frame2Instruction": null,
   "outputVideoPath": null,
   "firstFramePath": null,
-  "lastError": "Request failed with status code 400 | HTTP 400 Bad Request | Response: {\"ok\":false,\"error_code\":400,\"description\":\"Bad Request: IMAGE_PROCESS_FAILED\"}"
+  "lastError": null
 }

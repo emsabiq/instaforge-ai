@@ -1,6 +1,7 @@
 import axios from "axios";
 import FormData from "form-data";
 import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 import { downloadToFile, isHttpUrl } from "../utils/http.js";
 import type { TelegramFile } from "./telegramTypes.js";
@@ -84,8 +85,15 @@ export class TelegramClient {
     caption?: string
   ): Promise<void> {
     const form = new FormData();
+    const fileName = path.basename(filePath);
+    const fileStat = await stat(filePath);
+
     form.append("chat_id", String(chatId));
-    form.append(fieldName, createReadStream(filePath), path.basename(filePath));
+    form.append(fieldName, createReadStream(filePath), {
+      filename: fileName,
+      contentType: this.contentTypeFor(filePath, fieldName),
+      knownLength: fileStat.size
+    });
     if (caption) {
       form.append("caption", caption);
     }
@@ -107,5 +115,21 @@ export class TelegramClient {
 
   private fileUrl(filePath: string): string {
     return `${tgHost}/file/${botPrefix}${this.token}/${filePath}`;
+  }
+
+  private contentTypeFor(filePath: string, fieldName: "photo" | "video"): string {
+    const ext = path.extname(filePath).toLowerCase();
+    const knownTypes: Record<string, string> = {
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".webp": "image/webp",
+      ".gif": "image/gif",
+      ".mp4": "video/mp4",
+      ".mov": "video/quicktime",
+      ".webm": "video/webm"
+    };
+
+    return knownTypes[ext] || (fieldName === "photo" ? "image/jpeg" : "application/octet-stream");
   }
 }

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { FrameExtractor } from "../ffmpeg/frameExtractor.js";
 import { ImageService } from "../image/imageService.js";
+import type { CreateFrameResponse } from "../image/imageService.js";
 import type { Session } from "../session/sessionTypes.js";
 import { JsonSessionStore } from "../session/sessionStore.js";
 import { SftpUploader } from "../uploader/sftpUploader.js";
@@ -181,9 +182,9 @@ export class CommandRouter {
 
     await this.deps.telegram.sendMessage(chatId, `Membuat ${frameName} lewat Magnific image pipeline...`);
 
+    let frame: CreateFrameResponse;
     try {
-      const localFrame = await this.generateAndStoreFrame(userId, chatId, frameName, instruction);
-      await this.deps.telegram.sendPhoto(chatId, localFrame, `${frameName} siap.`);
+      frame = await this.generateAndStoreFrame(userId, chatId, frameName, instruction);
     } catch (error) {
       const message = describeHttpError(error);
       await this.deps.store.updateSession(userId, { status: "error", lastError: message });
@@ -191,7 +192,10 @@ export class CommandRouter {
         chatId,
         `Instruksi ${frameName} sudah disimpan, tapi generate image gagal: ${message}`
       );
+      return;
     }
+
+    await this.sendFramePreview(chatId, frameName, frame);
   }
 
   private async handlePrompt(userId: string, chatId: number, prompt: string): Promise<void> {
@@ -358,7 +362,8 @@ export class CommandRouter {
     }
 
     await this.deps.telegram.sendMessage(chatId, `${frameName} belum ada file final, generate ulang dari instruksi tersimpan...`);
-    return this.generateAndStoreFrame(userId, chatId, frameName, instruction);
+    const frame = await this.generateAndStoreFrame(userId, chatId, frameName, instruction);
+    return frame.image.path;
   }
 
   private async generateAndStoreFrame(
@@ -366,7 +371,7 @@ export class CommandRouter {
     chatId: number,
     frameName: FrameName,
     instruction: string
-  ): Promise<string> {
+  ): Promise<CreateFrameResponse> {
     const session = await this.deps.store.getOrCreateSession(userId);
     const baseImage = await this.ensureBaseImageForProvider(userId, session);
     const response = await this.deps.imageService.createFrameFromBase({
@@ -383,13 +388,54 @@ export class CommandRouter {
     });
 
     if (!response.upload.success) {
-      await this.deps.telegram.sendMessage(
-        chatId,
-        `Catatan: ${frameName} berhasil dibuat, tapi upload SFTP gagal. File lokal tetap ada di artifact Actions.`
-      );
+      try {
+        await this.deps.telegram.sendMessage(
+          chatId,
+          `Catatan: ${frameName} berhasil dibuat, tapi upload SFTP gagal. File lokal tetap ada di artifact Actions.`
+        );
+      } catch {
+        // The frame is already stored as ready; notification delivery is best-effort.
+      }
     }
 
-    return response.image.path;
+    return response;
+  }
+
+  private async sendFramePreview(
+    chatId: number,
+    frameName: FrameName,
+    frame: CreateFrameResponse
+  ): Promise<void> {
+    const candidates = [frame.storedPath, frame.image.url, frame.image.path]
+      .filter((value): value is string => Boolean(value))
+      .filter((value, index, values) => values.indexOf(value) === index)
+      .sort((a, b) => Number(!isHttpUrl(a)) - Number(!isHttpUrl(b)));
+    let lastError: string | null = null;
+
+    for (const candidate of candidates) {
+      try {
+        await this.deps.telegram.sendPhoto(chatId, candidate, `${frameName} siap.`);
+        return;
+      } catch (error) {
+        lastError = describeHttpError(error);
+      }
+    }
+
+    const previewLink = candidates.find(isHttpUrl);
+    try {
+      await this.deps.telegram.sendMessage(
+        chatId,
+        [
+          `${frameName} sudah siap, tapi Telegram gagal menampilkan preview${lastError ? `: ${lastError}` : "."}`,
+          previewLink ? `Link frame: ${previewLink}` : "",
+          frameName === "frame1" ? "Lanjut buat /frame2 <instruksi>." : "Lanjut buat /prompt <instruksi gerakan>."
+        ]
+          .filter(Boolean)
+          .join("\n")
+      );
+    } catch {
+      // Preview notification is best-effort; the frame is already stored as ready.
+    }
   }
 
   private async ensureBaseImageForProvider(userId: string, session: Session): Promise<string> {
