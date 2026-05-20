@@ -241,4 +241,4 @@ POST <MAGNIFIC_BASE_URL>/v1/ai/reference-to-video/happy-horse-1
 GET  <MAGNIFIC_BASE_URL>/v1/ai/reference-to-video/happy-horse-1/<taskId>
 ```
 
-Frame generation mengirim foto base sebagai URL file Telegram di `reference_images`. Video generation mengirim `frame1` dan `frame2` sebagai `image_urls`.
+Frame generation mengirim foto base sebagai URL file Telegram di `reference_images` dengan `aspect_ratio=widescreen_16_9`. Video generation mengirim `frame1` dan `frame2` sebagai `image_urls`, lalu prompt menyebutnya sebagai `character1` dan `character2`.

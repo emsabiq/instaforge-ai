@@ -43,10 +43,10 @@ export class MagnificVideoProvider implements VideoProvider {
     const outputPath = path.join(input.outputDir, `${input.projectId}-video.mp4`);
     const payload = {
       prompt: [
+        "character1 is the opening reference image.",
+        "character2 is the target ending reference image.",
         input.prompt,
-        "Use the first reference image as the opening frame.",
-        "Use the second reference image as the target ending pose and visual direction.",
-        "Keep the same identity and cinematic realism."
+        "Animate character1 toward the visual direction of character2 while preserving identity and cinematic realism."
       ].join(" "),
       image_urls: [{ url: input.frame1 }, { url: input.frame2 }],
       aspect_ratio: "16:9",

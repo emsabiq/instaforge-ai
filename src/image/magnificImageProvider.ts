@@ -45,7 +45,7 @@ export class MagnificImageProvider implements ImageProvider {
     const payload = {
       prompt: instruction,
       reference_images: [await this.imageInput(baseImage)],
-      aspect_ratio: "original",
+      aspect_ratio: "widescreen_16_9",
       enable_safety_checker: true
     };
 
