@@ -368,7 +368,7 @@ export class CommandRouter {
     instruction: string
   ): Promise<string> {
     const session = await this.deps.store.getOrCreateSession(userId);
-    const baseImage = await this.ensureBaseImageLocal(userId, session);
+    const baseImage = await this.ensureBaseImageForProvider(userId, session);
     const response = await this.deps.imageService.createFrameFromBase({
       baseImage,
       instruction,
@@ -392,6 +392,19 @@ export class CommandRouter {
     return response.image.path;
   }
 
+  private async ensureBaseImageForProvider(userId: string, session: Session): Promise<string> {
+    const localPath = await this.ensureBaseImageLocal(userId, session);
+    const upload = await this.deps.uploader.uploadFile(localPath, `${session.projectId}/base.jpg`);
+
+    if (upload.publicUrl && (await this.isReachable(upload.publicUrl))) {
+      await this.deps.store.updateSession(userId, { baseImageLocalPath: upload.publicUrl });
+      return upload.publicUrl;
+    }
+
+    const telegramUrl = await this.deps.telegram.getFileUrl(session.baseImageTelegramFileId as string);
+    return telegramUrl;
+  }
+
   private async ensureBaseImageLocal(userId: string, session: Session): Promise<string> {
     if (!session.baseImageTelegramFileId) {
       throw new Error("Foto base belum tersedia");
@@ -402,7 +415,7 @@ export class CommandRouter {
     const targetPath = path.join(projectDir, "base.jpg");
     await this.deps.telegram.downloadFile(session.baseImageTelegramFileId, targetPath);
     await this.deps.store.updateSession(userId, { baseImageLocalPath: targetPath });
-    return this.deps.telegram.getFileUrl(session.baseImageTelegramFileId);
+    return targetPath;
   }
 
   private async materializeFrame(session: Session, frameName: FrameName, framePath: string): Promise<string> {
@@ -453,5 +466,17 @@ export class CommandRouter {
 
   private userIdFor(message: TelegramMessage): string {
     return safeFileName(String(message.from?.id || message.chat.id));
+  }
+
+  private async isReachable(url: string): Promise<boolean> {
+    try {
+      let response = await fetch(url, { method: "HEAD" });
+      if (response.status === 405) {
+        response = await fetch(url, { method: "GET" });
+      }
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 }
