@@ -2,7 +2,7 @@ import path from "node:path";
 import { FrameExtractor } from "../ffmpeg/frameExtractor.js";
 import { ImageService } from "../image/imageService.js";
 import type { CreateFrameResponse } from "../image/imageService.js";
-import type { Session } from "../session/sessionTypes.js";
+import type { Session, SessionPatch } from "../session/sessionTypes.js";
 import { JsonSessionStore } from "../session/sessionStore.js";
 import { SftpUploader } from "../uploader/sftpUploader.js";
 import { describeHttpError } from "../utils/errors.js";
@@ -41,20 +41,25 @@ export class CommandRouter {
     const userId = this.userIdFor(message);
 
     try {
+      const text = (message.text || message.caption || "").trim();
+      const commandEnd = text.indexOf(" ") === -1 ? text.length : text.indexOf(" ");
+      const command = text.slice(0, commandEnd).toLowerCase().split("@")[0];
+      const args = text.slice(commandEnd).trim();
+
+      if (message.photo?.length && (command === "/frame1" || command === "/frame2")) {
+        await this.handleFramePhotoCommand(userId, chatId, command === "/frame1" ? "frame1" : "frame2", args, message.photo);
+        return;
+      }
+
       if (message.photo?.length) {
         await this.handlePhoto(userId, chatId, message.photo);
         return;
       }
 
-      const text = (message.text || message.caption || "").trim();
       if (!text) {
         await this.deps.telegram.sendMessage(chatId, this.helpText());
         return;
       }
-
-      const commandEnd = text.indexOf(" ") === -1 ? text.length : text.indexOf(" ");
-      const command = text.slice(0, commandEnd).toLowerCase().split("@")[0];
-      const args = text.slice(commandEnd).trim();
 
       switch (command) {
         case "/new":
@@ -131,7 +136,7 @@ export class CommandRouter {
 
   private async handlePhoto(userId: string, chatId: number, photos: TelegramPhotoSize[]): Promise<void> {
     const session = await this.deps.store.getOrCreateSession(userId);
-    const largest = [...photos].sort((a, b) => (b.file_size || b.width * b.height) - (a.file_size || a.width * a.height))[0];
+    const largest = this.largestPhoto(photos);
 
     await this.deps.store.updateSession(userId, {
       baseImageTelegramFileId: largest.file_id,
@@ -151,6 +156,50 @@ export class CommandRouter {
         "Lanjut: /frame1 <instruksi frame awal>."
       ].join("\n")
     );
+  }
+
+  private async handleFramePhotoCommand(
+    userId: string,
+    chatId: number,
+    frameName: FrameName,
+    instruction: string,
+    photos: TelegramPhotoSize[]
+  ): Promise<void> {
+    if (!instruction) {
+      await this.deps.telegram.sendMessage(
+        chatId,
+        `Tulis instruksi di caption foto, contoh: /${frameName} latar hutan realistis cinematic`
+      );
+      return;
+    }
+
+    const largest = this.largestPhoto(photos);
+    const patch: SessionPatch = {
+      baseImageTelegramFileId: largest.file_id,
+      baseImageLocalPath: null,
+      status: frameName === "frame1" ? "frame1_pending" : "frame2_pending",
+      lastError: null
+    };
+    patch[`${frameName}Instruction`] = instruction;
+    patch[`${frameName}Path`] = null;
+
+    await this.deps.store.updateSession(userId, patch);
+    await this.deps.telegram.sendMessage(chatId, `Foto dan instruksi ${frameName} diterima. Membuat frame lewat Magnific...`);
+
+    let frame: CreateFrameResponse;
+    try {
+      frame = await this.generateAndStoreFrame(userId, chatId, frameName, instruction);
+    } catch (error) {
+      const message = describeHttpError(error);
+      await this.deps.store.updateSession(userId, { status: "error", lastError: message });
+      await this.deps.telegram.sendMessage(
+        chatId,
+        `Instruksi ${frameName} sudah disimpan, tapi generate image gagal: ${message}`
+      );
+      return;
+    }
+
+    await this.sendFramePreview(chatId, frameName, frame);
   }
 
   private async handleFrameCommand(
@@ -496,7 +545,9 @@ export class CommandRouter {
       "/new",
       "/upload",
       "/frame1 <instruksi>",
+      "atau lampirkan foto dengan caption /frame1 <instruksi>",
       "/frame2 <instruksi>",
+      "atau lampirkan foto dengan caption /frame2 <instruksi>",
       "/prompt <instruksi gerakan>",
       "/generate",
       "/continue",
@@ -512,6 +563,10 @@ export class CommandRouter {
 
   private userIdFor(message: TelegramMessage): string {
     return safeFileName(String(message.from?.id || message.chat.id));
+  }
+
+  private largestPhoto(photos: TelegramPhotoSize[]): TelegramPhotoSize {
+    return [...photos].sort((a, b) => (b.file_size || b.width * b.height) - (a.file_size || a.width * a.height))[0];
   }
 
   private async isReachable(url: string): Promise<boolean> {
