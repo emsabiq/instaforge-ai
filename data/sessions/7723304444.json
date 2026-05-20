@@ -2,17 +2,17 @@
   "userId": "7723304444",
   "projectId": "tg-7723304444-1779252663984",
   "baseImageTelegramFileId": "AgACAgUAAxkBAAMiag1Bcbc_wo5rlezISI6pWT4MsYkAAnsPaxvkkGlU5j9cqoaxJ5gBAAMCAAN5AAM7BA",
-  "baseImageLocalPath": null,
+  "baseImageLocalPath": "generated/tg-7723304444-1779252663984/inputs/base.jpg",
   "frame1Path": null,
   "frame2Path": null,
   "lastEndFramePath": null,
   "prompt": null,
-  "status": "base_uploaded",
+  "status": "error",
   "createdAt": "2026-05-20T04:51:03.984Z",
-  "updatedAt": "2026-05-20T05:07:42.585Z",
-  "frame1Instruction": null,
+  "updatedAt": "2026-05-20T05:08:55.614Z",
+  "frame1Instruction": "tentara sedang melihat peta di hutan, realitis, cinematic, detail wajah tetap mirip foto asli",
   "frame2Instruction": null,
   "outputVideoPath": null,
   "firstFramePath": null,
-  "lastError": null
+  "lastError": "Request failed with status code 404"
 }
