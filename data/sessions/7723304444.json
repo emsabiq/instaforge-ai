@@ -1,20 +1,20 @@
 {
   "userId": "7723304444",
   "projectId": "tg-7723304444-1779252663984",
-  "baseImageTelegramFileId": "AgACAgUAAxkBAAMMag0-Ngj2pSvPT65h3r7MtQbM2xEAAnQPaxvkkGlUR4CSD7M8ChQBAAMCAAN5AAM7BA",
-  "baseImageLocalPath": "generated/tg-7723304444-1779252663984/inputs/base.jpg",
+  "baseImageTelegramFileId": "AgACAgUAAxkBAANjag1555S7p0IvbIandZllZMK2tLQAAsMPaxvkkGlULPW4ejjX8h8BAAMCAAN5AAM7BA",
+  "baseImageLocalPath": "https://ai.emsa.pro/telegram-ai-frame/tg-7723304444-1779252663984/frame2-base.jpg",
   "frame1Path": "https://ai.emsa.pro/telegram-ai-frame/tg-7723304444-1779252663984/last-frame.jpg",
   "frame2Path": null,
   "lastEndFramePath": "https://ai.emsa.pro/telegram-ai-frame/tg-7723304444-1779252663984/last-frame.jpg",
   "prompt": null,
-  "status": "frame1_ready",
+  "status": "error",
   "createdAt": "2026-05-20T04:51:03.984Z",
-  "updatedAt": "2026-05-20T09:04:46.954Z",
+  "updatedAt": "2026-05-20T09:08:37.579Z",
   "frame1Instruction": "previous last frame",
-  "frame2Instruction": null,
+  "frame2Instruction": "buatkan tentara berlari diatas air dengan gaya pewarnaan yang sama dengan sebelumnya. Buat persis wajahnya",
   "frame1BaseImageTelegramFileId": null,
-  "frame2BaseImageTelegramFileId": null,
+  "frame2BaseImageTelegramFileId": "AgACAgUAAxkBAANjag1555S7p0IvbIandZllZMK2tLQAAsMPaxvkkGlULPW4ejjX8h8BAAMCAAN5AAM7BA",
   "outputVideoPath": "https://ai.emsa.pro/telegram-ai-frame/tg-7723304444-1779252663984/video.mp4",
   "firstFramePath": "https://ai.emsa.pro/telegram-ai-frame/tg-7723304444-1779252663984/first-frame.jpg",
-  "lastError": null
+  "lastError": "Request failed with status code 429 | HTTP 429 Too Many Requests | Response: {\"message\":\"Hello! You have reached the limit of the free trial usage. You can upgrade to a paid plan here: https://www.magnific.com/developers/dashboard/billing\"}"
 }
