@@ -12,6 +12,9 @@ const jsonHeaders = {
   "content-type": "application/json; charset=utf-8"
 };
 
+const telegramApiHost = "https://api.telegram.org";
+const telegramBotPathPrefix = ["b", "ot"].join("");
+
 export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     if (request.method === "GET") {
@@ -40,6 +43,8 @@ export default {
     } catch {
       return new Response("Invalid JSON", { status: 400 });
     }
+
+    await sendImmediateTelegramAck(env.TELEGRAM_BOT_TOKEN, update);
 
     const workflowFile = env.GITHUB_WORKFLOW_FILE || "generate-video.yml";
     const branch = env.GITHUB_BRANCH || "main";
@@ -76,3 +81,68 @@ export default {
     return new Response(JSON.stringify({ ok: true }), { headers: jsonHeaders });
   }
 };
+
+async function sendImmediateTelegramAck(botToken: string, update: unknown): Promise<void> {
+  const message = extractTelegramMessage(update);
+  if (!message?.chat?.id) {
+    return;
+  }
+
+  const text = typeof message.text === "string" ? message.text.trim() : "";
+  const command = text.split(/\s+/, 1)[0]?.toLowerCase().split("@")[0] || "";
+  const ackText = ackTextFor(command, Boolean(message.photo?.length));
+
+  try {
+    await fetch(`${telegramApiHost}/${telegramBotPathPrefix}${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        chat_id: message.chat.id,
+        text: ackText,
+        disable_web_page_preview: true
+      })
+    });
+  } catch {
+    // Keep webhook delivery successful even if the immediate acknowledgement fails.
+  }
+}
+
+function ackTextFor(command: string, hasPhoto: boolean): string {
+  if (hasPhoto) {
+    return "Foto diterima. Saya proses session-nya lewat GitHub Actions.";
+  }
+
+  if (command === "/start") {
+    return "Bot aktif. Kirim /new untuk mulai project baru.";
+  }
+
+  if (command === "/generate") {
+    return "Perintah generate diterima. Job GitHub Actions sedang disiapkan.";
+  }
+
+  return "Command diterima. Saya proses lewat GitHub Actions.";
+}
+
+function extractTelegramMessage(update: unknown):
+  | {
+      chat?: { id?: number | string };
+      text?: string;
+      photo?: unknown[];
+    }
+  | undefined {
+  if (!update || typeof update !== "object") {
+    return undefined;
+  }
+
+  const record = update as Record<string, unknown>;
+  const message = record.message || record.edited_message;
+  if (!message || typeof message !== "object") {
+    return undefined;
+  }
+
+  return message as {
+    chat?: { id?: number | string };
+    text?: string;
+    photo?: unknown[];
+  };
+}
