@@ -209,15 +209,15 @@ export class MagnificImageProvider implements ImageProvider {
   }
 
   private extractBase64(data: unknown): string | null {
-    return this.findString(data, ["image_base64", "imageBase64", "base64", "b64_json"]);
+    return this.findStringByKey(data, ["image_base64", "imageBase64", "base64", "b64_json"]);
   }
 
   private extractJobId(data: unknown): string | null {
-    return this.findString(data, ["id", "job_id", "jobId", "task_id", "taskId"]);
+    return this.findStringByKey(data, ["id", "job_id", "jobId", "task_id", "taskId"]);
   }
 
   private extractStatus(data: unknown): string | null {
-    return this.findString(data, ["status", "state", "task_status", "taskStatus"]);
+    return this.findStringByKey(data, ["status", "state", "task_status", "taskStatus"]);
   }
 
   private findString(data: unknown, keys: string[]): string | null {
@@ -256,6 +256,46 @@ export class MagnificImageProvider implements ImageProvider {
 
     for (const value of Object.values(record)) {
       const nested = this.findString(value, keys);
+      if (nested) {
+        return nested;
+      }
+    }
+
+    return null;
+  }
+
+  private findStringByKey(data: unknown, keys: string[]): string | null {
+    if (!data || typeof data !== "object") {
+      return null;
+    }
+
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        const value = this.findStringByKey(item, keys);
+        if (value) {
+          return value;
+        }
+      }
+      return null;
+    }
+
+    const record = data as Record<string, unknown>;
+    for (const key of keys) {
+      const value = record[key];
+      if (typeof value === "string" && value.trim() !== "") {
+        return value;
+      }
+
+      if (Array.isArray(value)) {
+        const first = value.find((item): item is string => typeof item === "string" && item.trim() !== "");
+        if (first) {
+          return first;
+        }
+      }
+    }
+
+    for (const value of Object.values(record)) {
+      const nested = this.findStringByKey(value, keys);
       if (nested) {
         return nested;
       }
