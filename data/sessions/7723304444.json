@@ -9,12 +9,12 @@
   "prompt": null,
   "status": "error",
   "createdAt": "2026-05-20T04:51:03.984Z",
-  "updatedAt": "2026-05-20T09:15:32.229Z",
+  "updatedAt": "2026-05-20T09:23:40.809Z",
   "frame1Instruction": "previous last frame",
   "frame2Instruction": "buatkan tentara berlari diatas air dengan gaya pewarnaan yang sama dengan sebelumnya. Buat persis wajahnya",
   "frame1BaseImageTelegramFileId": null,
   "frame2BaseImageTelegramFileId": "AgACAgUAAxkBAANjag1555S7p0IvbIandZllZMK2tLQAAsMPaxvkkGlULPW4ejjX8h8BAAMCAAN5AAM7BA",
   "outputVideoPath": "https://ai.emsa.pro/telegram-ai-frame/tg-7723304444-1779252663984/video.mp4",
   "firstFramePath": "https://ai.emsa.pro/telegram-ai-frame/tg-7723304444-1779252663984/first-frame.jpg",
-  "lastError": "Request failed with status code 429 | HTTP 429 Too Many Requests | Response: {\"message\":\"Hello! You have reached the limit of the free trial usage. You can upgrade to a paid plan here: https://www.magnific.com/developers/dashboard/billing\"}"
+  "lastError": "Request failed with status code 401 | HTTP 401 Unauthorized | Response: {\"message\":\"Unauthorized: The provided API key is invalid. Please verify your API key at https://www.magnific.com/developers/dashboard/api-key. If you need a new key, you can request one at https://www.magnific.com/api.\"}"
 }
