@@ -227,8 +227,8 @@ export class CommandRouter {
 
     const videoDir = path.join(this.outputRoot, session.projectId, "video");
     const video = await this.deps.videoService.generateVideo({
-      frame1,
-      frame2,
+      frame1: session.frame1Path && isHttpUrl(session.frame1Path) ? session.frame1Path : frame1,
+      frame2: session.frame2Path && isHttpUrl(session.frame2Path) ? session.frame2Path : frame2,
       prompt,
       durationSeconds: 8,
       outputDir: videoDir,

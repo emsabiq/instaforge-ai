@@ -1,6 +1,4 @@
 import axios from "axios";
-import FormData from "form-data";
-import { createReadStream } from "node:fs";
 import path from "node:path";
 import { ensureDir } from "../utils/fs.js";
 import { downloadToFile, isHttpUrl } from "../utils/http.js";
@@ -13,39 +11,53 @@ interface MagnificVideoProviderConfig {
   ffmpegPath?: string;
 }
 
+const klingEndpoint = "/video/kling-v3-pro";
+
 export class MagnificVideoProvider implements VideoProvider {
   private readonly apiKey?: string;
   private readonly baseUrl?: string;
   private readonly ffmpegPath: string;
 
   constructor(config: MagnificVideoProviderConfig = {}) {
-    this.apiKey = config.apiKey || process.env.VIDEO_PROVIDER_API_KEY;
-    this.baseUrl = (config.baseUrl || process.env.VIDEO_PROVIDER_BASE_URL || "").replace(/\/$/, "");
+    this.apiKey = config.apiKey || process.env.VIDEO_PROVIDER_API_KEY || process.env.MAGNIFIC_API_KEY;
+    this.baseUrl = (
+      config.baseUrl ||
+      process.env.VIDEO_PROVIDER_BASE_URL ||
+      process.env.MAGNIFIC_BASE_URL ||
+      "https://api.magnific.com"
+    ).replace(/\/$/, "");
     this.ffmpegPath = config.ffmpegPath || process.env.FFMPEG_PATH || "ffmpeg";
   }
 
   async generateVideo(input: VideoInput): Promise<VideoResult> {
     await ensureDir(input.outputDir);
 
-    if (this.apiKey && this.baseUrl) {
-      return this.generateWithApi(input);
+    if (this.apiKey && this.baseUrl && isHttpUrl(input.frame1) && isHttpUrl(input.frame2)) {
+      return this.generateWithKling(input);
     }
 
     return this.generateStubWithFfmpeg(input);
   }
 
-  private async generateWithApi(input: VideoInput): Promise<VideoResult> {
+  private async generateWithKling(input: VideoInput): Promise<VideoResult> {
     const outputPath = path.join(input.outputDir, `${input.projectId}-video.mp4`);
-    const form = new FormData();
-    form.append("prompt", input.prompt);
-    form.append("duration", String(input.durationSeconds));
-    this.appendImage(form, "frame1", input.frame1);
-    this.appendImage(form, "frame2", input.frame2);
+    const payload = {
+      prompt: input.prompt,
+      start_image_url: input.frame1,
+      end_image_url: input.frame2,
+      generate_audio: false,
+      multi_shot: false,
+      shot_type: "customize",
+      aspect_ratio: "16:9",
+      duration: String(input.durationSeconds),
+      negative_prompt: "blur, distort, low quality, deformed face, extra limbs",
+      cfg_scale: 0.5
+    };
 
-    const response = await axios.post(this.apiUrl("/videos/generate"), form, {
+    const response = await axios.post(this.apiUrl(klingEndpoint), payload, {
       headers: {
-        ...form.getHeaders(),
-        authorization: `Bearer ${this.apiKey}`
+        "content-type": "application/json",
+        "x-magnific-api-key": this.apiKey
       },
       maxBodyLength: Infinity,
       maxContentLength: Infinity
@@ -58,41 +70,41 @@ export class MagnificVideoProvider implements VideoProvider {
       return {
         path: outputPath,
         url: immediateUrl,
-        provider: "magnific-video",
+        provider: "magnific-kling-v3-pro",
         metadata: this.asMetadata(initial)
       };
     }
 
-    const jobId = this.extractJobId(initial);
-    if (!jobId) {
-      throw new Error("Video provider response did not include a video URL or job id");
+    const taskId = this.extractJobId(initial);
+    if (!taskId) {
+      throw new Error("Magnific Kling response did not include a video URL or task_id");
     }
 
     for (let attempt = 0; attempt < 90; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 10000));
-      const poll = await axios.get(this.apiUrl(`/jobs/${jobId}`), {
-        headers: { authorization: `Bearer ${this.apiKey}` }
+      const poll = await axios.get(this.apiUrl(`${klingEndpoint}/${taskId}`), {
+        headers: { "x-magnific-api-key": this.apiKey }
       });
       const data = poll.data as unknown;
-      const status = this.extractStatus(data);
+      const status = this.extractStatus(data)?.toUpperCase();
 
-      if (status === "failed" || status === "error") {
-        throw new Error("Video provider job failed");
+      if (status === "FAILED") {
+        throw new Error("Magnific Kling video job failed");
       }
 
       const url = this.extractUrl(data);
-      if (url) {
+      if (status === "COMPLETED" && url) {
         await downloadToFile(url, outputPath);
         return {
           path: outputPath,
           url,
-          provider: "magnific-video",
+          provider: "magnific-kling-v3-pro",
           metadata: this.asMetadata(data)
         };
       }
     }
 
-    throw new Error("Timed out waiting for video provider job");
+    throw new Error("Timed out waiting for Magnific Kling video job");
   }
 
   private async generateStubWithFfmpeg(input: VideoInput): Promise<VideoResult> {
@@ -138,22 +150,13 @@ export class MagnificVideoProvider implements VideoProvider {
       path: outputPath,
       provider: "magnific-video-stub",
       metadata: {
-        note: "VIDEO_PROVIDER_BASE_URL and VIDEO_PROVIDER_API_KEY are not set, so FFmpeg stub output was generated."
+        note: "Kling needs public frame URLs. Falling back to FFmpeg stub because one or both frame inputs were local paths."
       }
     };
   }
 
-  private appendImage(form: FormData, fieldName: string, image: string): void {
-    if (isHttpUrl(image)) {
-      form.append(`${fieldName}_url`, image);
-      return;
-    }
-
-    form.append(fieldName, createReadStream(image), path.basename(image));
-  }
-
   private extractUrl(data: unknown): string | null {
-    return this.findString(data, ["video_url", "videoUrl", "output_url", "outputUrl", "url"]);
+    return this.findString(data, ["video_url", "videoUrl", "output_url", "outputUrl", "url", "generated"]);
   }
 
   private extractJobId(data: unknown): string | null {
@@ -161,7 +164,7 @@ export class MagnificVideoProvider implements VideoProvider {
   }
 
   private extractStatus(data: unknown): string | null {
-    return this.findString(data, ["status", "state"]);
+    return this.findString(data, ["status", "state", "task_status", "taskStatus"]);
   }
 
   private findString(data: unknown, keys: string[]): string | null {
@@ -171,6 +174,10 @@ export class MagnificVideoProvider implements VideoProvider {
 
     if (Array.isArray(data)) {
       for (const item of data) {
+        if (typeof item === "string" && item.trim() !== "") {
+          return item;
+        }
+
         const value = this.findString(item, keys);
         if (value) {
           return value;
@@ -184,6 +191,13 @@ export class MagnificVideoProvider implements VideoProvider {
       const value = record[key];
       if (typeof value === "string" && value.trim() !== "") {
         return value;
+      }
+
+      if (Array.isArray(value)) {
+        const first = this.findString(value, keys);
+        if (first) {
+          return first;
+        }
       }
     }
 
@@ -199,13 +213,18 @@ export class MagnificVideoProvider implements VideoProvider {
 
   private apiUrl(pathname: string): string {
     if (!this.baseUrl) {
-      throw new Error("VIDEO_PROVIDER_BASE_URL is not configured");
+      throw new Error("Magnific base URL is not configured");
+    }
+
+    if (this.baseUrl.endsWith("/v1/ai")) {
+      return `${this.baseUrl}${pathname}`;
     }
 
     if (this.baseUrl.endsWith("/v1")) {
-      return `${this.baseUrl}${pathname}`;
+      return `${this.baseUrl}/ai${pathname}`;
     }
-    return `${this.baseUrl}/v1${pathname}`;
+
+    return `${this.baseUrl}/v1/ai${pathname}`;
   }
 
   private asMetadata(data: unknown): Record<string, unknown> | undefined {

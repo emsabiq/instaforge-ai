@@ -13,8 +13,8 @@ User upload foto base ke Telegram, membuat `frame1` dan `frame2` lewat instruksi
 - GitHub Actions untuk proses berat
 - JSON session store di `data/sessions`
 - Magnific API untuk image edit/enhance
-- `VideoProvider` abstraction dengan default `MagnificVideoProvider`
-- FFmpeg untuk extract first/last frame dan fallback video stub
+- `VideoProvider` abstraction dengan default `MagnificVideoProvider` untuk Magnific Kling 3 Pro
+- FFmpeg untuk extract first/last frame dan fallback video stub jika frame URL publik belum tersedia
 - SFTP upload via `ssh2-sftp-client`
 
 ## Struktur
@@ -82,7 +82,7 @@ PUBLIC_BASE_URL
 UPLOAD_DRIVER
 ```
 
-`VIDEO_PROVIDER_*` boleh kosong untuk MVP. Jika kosong, `MagnificVideoProvider` memakai FFmpeg stub yang membuat video transisi sederhana dari `frame1` ke `frame2`. Flow utama tidak berubah saat provider video asli diganti nanti.
+`VIDEO_PROVIDER_*` boleh kosong untuk MVP. Jika kosong, `MagnificVideoProvider` memakai `MAGNIFIC_API_KEY` + `MAGNIFIC_BASE_URL` dan memanggil Kling 3 Pro. Jika frame belum punya URL publik, provider otomatis fallback ke FFmpeg stub.
 
 ## Install
 
@@ -201,15 +201,16 @@ Output lokal di-upload sebagai artifact `generated-ai-frame-outputs`. Jika SFTP 
 
 ## Magnific Image API
 
-`MagnificImageProvider` memakai endpoint generik:
+`MagnificImageProvider` memakai endpoint resmi Magnific:
 
 ```txt
-POST <MAGNIFIC_BASE_URL>/v1/images/edit
-POST <MAGNIFIC_BASE_URL>/v1/images/enhance
-GET  <MAGNIFIC_BASE_URL>/v1/jobs/<jobId>
+POST <MAGNIFIC_BASE_URL>/v1/ai/text-to-image/seedream-v5-lite-edit
+GET  <MAGNIFIC_BASE_URL>/v1/ai/text-to-image/seedream-v5-lite-edit/<taskId>
+POST <MAGNIFIC_BASE_URL>/v1/ai/image-upscaler-precision-v2
+GET  <MAGNIFIC_BASE_URL>/v1/ai/image-upscaler-precision-v2/<taskId>
 ```
 
-Provider dibuat toleran terhadap response umum seperti `image_url`, `output_url`, `url`, atau base64. Jika endpoint Magnific aktual berbeda, ubah adapter ini saja:
+Provider dibuat toleran terhadap response umum seperti `generated`, `image_url`, `output_url`, `url`, atau base64. Jika endpoint Magnific aktual berbeda, ubah adapter ini saja:
 
 ```txt
 src/image/magnificImageProvider.ts
@@ -232,3 +233,10 @@ src/jobs/generateSceneJob.ts
 ```
 
 Flow command, session, FFmpeg, SFTP, dan Telegram tidak perlu berubah.
+
+Default video provider sekarang memakai:
+
+```txt
+POST <MAGNIFIC_BASE_URL>/v1/ai/video/kling-v3-pro
+GET  <MAGNIFIC_BASE_URL>/v1/ai/video/kling-v3-pro/<taskId>
+```
