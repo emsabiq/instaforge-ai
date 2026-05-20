@@ -4,6 +4,7 @@ import { ImageService } from "../image/imageService.js";
 import type { Session } from "../session/sessionTypes.js";
 import { JsonSessionStore } from "../session/sessionStore.js";
 import { SftpUploader } from "../uploader/sftpUploader.js";
+import { describeHttpError } from "../utils/errors.js";
 import { ensureDir, safeFileName } from "../utils/fs.js";
 import { isHttpUrl } from "../utils/http.js";
 import { VideoService } from "../video/videoService.js";
@@ -101,7 +102,7 @@ export class CommandRouter {
           await this.deps.telegram.sendMessage(chatId, this.helpText());
       }
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : String(error);
+      const messageText = describeHttpError(error);
       await this.deps.store.updateSession(userId, {
         status: "error",
         lastError: messageText
@@ -184,7 +185,7 @@ export class CommandRouter {
       const localFrame = await this.generateAndStoreFrame(userId, chatId, frameName, instruction);
       await this.deps.telegram.sendPhoto(chatId, localFrame, `${frameName} siap.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = describeHttpError(error);
       await this.deps.store.updateSession(userId, { status: "error", lastError: message });
       await this.deps.telegram.sendMessage(
         chatId,
