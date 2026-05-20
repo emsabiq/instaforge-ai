@@ -237,6 +237,8 @@ Flow command, session, FFmpeg, SFTP, dan Telegram tidak perlu berubah.
 Default video provider sekarang memakai:
 
 ```txt
-POST <MAGNIFIC_BASE_URL>/v1/ai/video/kling-v3-pro
-GET  <MAGNIFIC_BASE_URL>/v1/ai/video/kling-v3-pro/<taskId>
+POST <MAGNIFIC_BASE_URL>/v1/ai/reference-to-video/happy-horse-1
+GET  <MAGNIFIC_BASE_URL>/v1/ai/reference-to-video/happy-horse-1/<taskId>
 ```
+
+Frame generation mengirim foto base sebagai URL file Telegram di `reference_images`. Video generation mengirim `frame1` dan `frame2` sebagai `image_urls`.

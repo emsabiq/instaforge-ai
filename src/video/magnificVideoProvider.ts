@@ -11,7 +11,7 @@ interface MagnificVideoProviderConfig {
   ffmpegPath?: string;
 }
 
-const klingEndpoint = "/video/kling-v3-pro";
+const referenceToVideoEndpoint = "/reference-to-video/happy-horse-1";
 
 export class MagnificVideoProvider implements VideoProvider {
   private readonly apiKey?: string;
@@ -33,28 +33,29 @@ export class MagnificVideoProvider implements VideoProvider {
     await ensureDir(input.outputDir);
 
     if (this.apiKey && this.baseUrl && isHttpUrl(input.frame1) && isHttpUrl(input.frame2)) {
-      return this.generateWithKling(input);
+      return this.generateWithReferenceToVideo(input);
     }
 
     return this.generateStubWithFfmpeg(input);
   }
 
-  private async generateWithKling(input: VideoInput): Promise<VideoResult> {
+  private async generateWithReferenceToVideo(input: VideoInput): Promise<VideoResult> {
     const outputPath = path.join(input.outputDir, `${input.projectId}-video.mp4`);
     const payload = {
-      prompt: input.prompt,
-      start_image_url: input.frame1,
-      end_image_url: input.frame2,
-      generate_audio: false,
-      multi_shot: false,
-      shot_type: "customize",
+      prompt: [
+        input.prompt,
+        "Use the first reference image as the opening frame.",
+        "Use the second reference image as the target ending pose and visual direction.",
+        "Keep the same identity and cinematic realism."
+      ].join(" "),
+      image_urls: [{ url: input.frame1 }, { url: input.frame2 }],
       aspect_ratio: "16:9",
-      duration: String(input.durationSeconds),
-      negative_prompt: "blur, distort, low quality, deformed face, extra limbs",
-      cfg_scale: 0.5
+      resolution: "1080P",
+      duration: input.durationSeconds,
+      watermark: false
     };
 
-    const response = await axios.post(this.apiUrl(klingEndpoint), payload, {
+    const response = await axios.post(this.apiUrl(referenceToVideoEndpoint), payload, {
       headers: {
         "content-type": "application/json",
         "x-magnific-api-key": this.apiKey
@@ -70,26 +71,26 @@ export class MagnificVideoProvider implements VideoProvider {
       return {
         path: outputPath,
         url: immediateUrl,
-        provider: "magnific-kling-v3-pro",
+        provider: "magnific-happy-horse-1",
         metadata: this.asMetadata(initial)
       };
     }
 
     const taskId = this.extractJobId(initial);
     if (!taskId) {
-      throw new Error("Magnific Kling response did not include a video URL or task_id");
+      throw new Error("Magnific Happy Horse response did not include a video URL or task_id");
     }
 
     for (let attempt = 0; attempt < 90; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 10000));
-      const poll = await axios.get(this.apiUrl(`${klingEndpoint}/${taskId}`), {
+      const poll = await axios.get(this.apiUrl(`${referenceToVideoEndpoint}/${taskId}`), {
         headers: { "x-magnific-api-key": this.apiKey }
       });
       const data = poll.data as unknown;
       const status = this.extractStatus(data)?.toUpperCase();
 
       if (status === "FAILED") {
-        throw new Error("Magnific Kling video job failed");
+        throw new Error("Magnific Happy Horse video job failed");
       }
 
       const url = this.extractUrl(data);
@@ -98,13 +99,13 @@ export class MagnificVideoProvider implements VideoProvider {
         return {
           path: outputPath,
           url,
-          provider: "magnific-kling-v3-pro",
+          provider: "magnific-happy-horse-1",
           metadata: this.asMetadata(data)
         };
       }
     }
 
-    throw new Error("Timed out waiting for Magnific Kling video job");
+    throw new Error("Timed out waiting for Magnific Happy Horse video job");
   }
 
   private async generateStubWithFfmpeg(input: VideoInput): Promise<VideoResult> {
@@ -150,7 +151,7 @@ export class MagnificVideoProvider implements VideoProvider {
       path: outputPath,
       provider: "magnific-video-stub",
       metadata: {
-        note: "Kling needs public frame URLs. Falling back to FFmpeg stub because one or both frame inputs were local paths."
+        note: "Happy Horse needs public frame URLs. Falling back to FFmpeg stub because one or both frame inputs were local paths."
       }
     };
   }

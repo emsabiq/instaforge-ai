@@ -56,6 +56,11 @@ export class TelegramClient {
     return downloadToFile(this.fileUrl(file.file_path), targetPath);
   }
 
+  async getFileUrl(fileId: string): Promise<string> {
+    const file = await this.getFile(fileId);
+    return this.fileUrl(file.file_path);
+  }
+
   private async request<T>(method: string, payload: Record<string, unknown>): Promise<T> {
     const response = await fetch(this.apiUrl(method), {
       method: "POST",

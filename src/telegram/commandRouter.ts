@@ -401,7 +401,7 @@ export class CommandRouter {
     const targetPath = path.join(projectDir, "base.jpg");
     await this.deps.telegram.downloadFile(session.baseImageTelegramFileId, targetPath);
     await this.deps.store.updateSession(userId, { baseImageLocalPath: targetPath });
-    return targetPath;
+    return this.deps.telegram.getFileUrl(session.baseImageTelegramFileId);
   }
 
   private async materializeFrame(session: Session, frameName: FrameName, framePath: string): Promise<string> {

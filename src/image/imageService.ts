@@ -38,11 +38,12 @@ export class ImageService {
           localPath: image.path,
           error: "SFTP uploader is not configured"
         };
+    const storedPath = await this.pickStoredPath(image, upload);
 
     return {
       image,
       upload,
-      storedPath: upload.publicUrl || image.path
+      storedPath
     };
   }
 
@@ -60,5 +61,29 @@ export class ImageService {
     }
 
     throw new Error(`Image is not available locally or as URL: ${imagePathOrUrl}`);
+  }
+
+  private async pickStoredPath(image: ImageResult, upload: UploadResult): Promise<string> {
+    if (upload.publicUrl && (await this.isReachable(upload.publicUrl))) {
+      return upload.publicUrl;
+    }
+
+    if (image.url) {
+      return image.url;
+    }
+
+    return upload.publicUrl || image.path;
+  }
+
+  private async isReachable(url: string): Promise<boolean> {
+    try {
+      let response = await fetch(url, { method: "HEAD" });
+      if (response.status === 405) {
+        response = await fetch(url, { method: "GET" });
+      }
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 }

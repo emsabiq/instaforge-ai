@@ -1,6 +1,6 @@
 import axios from "axios";
 import path from "node:path";
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { ensureDir } from "../utils/fs.js";
 import { downloadToFile, isHttpUrl } from "../utils/http.js";
 import type {
@@ -149,8 +149,7 @@ export class MagnificImageProvider implements ImageProvider {
       return image;
     }
 
-    const content = await readFile(image);
-    return content.toString("base64");
+    throw new Error("Magnific Seedream requires a public reference image URL");
   }
 
   private extractUrl(data: unknown): string | null {
