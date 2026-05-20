@@ -109,18 +109,18 @@ async function sendImmediateTelegramAck(botToken: string, update: unknown): Prom
 
 function ackTextFor(command: string, hasPhoto: boolean): string {
   if (hasPhoto) {
-    return "Foto diterima. Saya proses session-nya lewat GitHub Actions.";
+    return "Foto diterima, diproses...";
   }
 
   if (command === "/start") {
-    return "Bot aktif. Kirim /new untuk mulai project baru.";
+    return "Bot aktif. Kirim /new.";
   }
 
   if (command === "/generate") {
-    return "Perintah generate diterima. Job GitHub Actions sedang disiapkan.";
+    return "Generate diterima, diproses...";
   }
 
-  return "Command diterima. Saya proses lewat GitHub Actions.";
+  return "Diproses...";
 }
 
 function extractTelegramMessage(update: unknown):

@@ -23,6 +23,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Sync latest session state
+        run: git pull --ff-only origin main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -85,6 +90,6 @@ jobs:
             echo "No session changes to commit."
           else
             git commit -m "Persist Telegram session state"
-            git pull --rebase origin "${GITHUB_REF_NAME:-main}"
+            git pull --rebase -X theirs origin "${GITHUB_REF_NAME:-main}"
             git push
           fi

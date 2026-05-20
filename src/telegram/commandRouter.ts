@@ -162,18 +162,21 @@ export class CommandRouter {
       return;
     }
 
+    const session = await this.deps.store.getOrCreateSession(userId);
+    if (!session.baseImageTelegramFileId) {
+      await this.deps.telegram.sendMessage(
+        chatId,
+        `Belum ada foto base. Upload foto dulu, lalu ulangi /${frameName} <instruksi>.`
+      );
+      return;
+    }
+
     await this.deps.store.updateSession(userId, {
       [`${frameName}Instruction`]: instruction,
       [`${frameName}Path`]: null,
       status: frameName === "frame1" ? "frame1_pending" : "frame2_pending",
       lastError: null
     });
-
-    const session = await this.deps.store.getOrCreateSession(userId);
-    if (!session.baseImageTelegramFileId) {
-      await this.deps.telegram.sendMessage(chatId, "Belum ada foto base. Kirim /upload lalu upload foto base dulu.");
-      return;
-    }
 
     await this.deps.telegram.sendMessage(chatId, `Membuat ${frameName} lewat Magnific image pipeline...`);
 
