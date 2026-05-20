@@ -5,17 +5,12 @@ yarn-error.log*
 
 .env
 *.env
-.vercel/
+!.env.example
 
-generated/videos/
-generated/thumbnails/
-generated/metadata/
-generated/tmp/
-generated/logs/
-data/history.json
+dist/
+generated/
+.wrangler/
 
 *.zip
 .DS_Store
 Thumbs.db
-
-.vercel

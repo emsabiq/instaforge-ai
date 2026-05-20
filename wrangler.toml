@@ -1,0 +1,7 @@
+name = "telegram-ai-frame-worker"
+main = "worker/src/index.ts"
+compatibility_date = "2026-05-20"
+
+[vars]
+GITHUB_WORKFLOW_FILE = "generate-video.yml"
+GITHUB_BRANCH = "main"

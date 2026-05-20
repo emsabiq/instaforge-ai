@@ -1,0 +1,89 @@
+name: Telegram AI Video Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      telegram_update:
+        description: Raw Telegram update JSON from Cloudflare Worker
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: telegram-ai-frame-pipeline
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Handle Telegram update
+        env:
+          TELEGRAM_UPDATE: ${{ inputs.telegram_update }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          MAGNIFIC_API_KEY: ${{ secrets.MAGNIFIC_API_KEY }}
+          MAGNIFIC_BASE_URL: ${{ secrets.MAGNIFIC_BASE_URL }}
+          VIDEO_PROVIDER_API_KEY: ${{ secrets.VIDEO_PROVIDER_API_KEY }}
+          VIDEO_PROVIDER_BASE_URL: ${{ secrets.VIDEO_PROVIDER_BASE_URL }}
+          UPLOAD_DRIVER: ${{ secrets.UPLOAD_DRIVER || 'ftp' }}
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_PORT: ${{ secrets.SFTP_PORT }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+          SFTP_REMOTE_DIR: ${{ secrets.SFTP_REMOTE_DIR }}
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_REMOTE_DIR: ${{ secrets.FTP_REMOTE_DIR }}
+          PUBLIC_BASE_URL: ${{ secrets.PUBLIC_BASE_URL }}
+          SESSION_DIR: data/sessions
+          OUTPUT_DIR: generated
+          FFMPEG_PATH: ffmpeg
+        run: npm run job:generate
+
+      - name: Upload generated outputs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-ai-frame-outputs
+          path: generated/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Persist session JSON
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/sessions
+          if git diff --cached --quiet; then
+            echo "No session changes to commit."
+          else
+            git commit -m "Persist Telegram session state"
+            git push
+          fi

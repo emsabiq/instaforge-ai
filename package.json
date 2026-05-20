@@ -3,19 +3,26 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Simple AI video generator with Instagram Reels publishing and a Vercel dashboard.",
+  "description": "Telegram to Cloudflare Worker to GitHub Actions pipeline for AI frame editing and video generation.",
   "scripts": {
-    "build": "node -e \"console.log('No build step needed')\"",
-    "check": "node src/check.js",
-    "dev": "node src/local-server.js",
-    "generate": "node src/run.js",
-    "run": "node src/run.js"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "job:generate": "tsx src/jobs/generateSceneJob.ts",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy"
   },
   "dependencies": {
     "axios": "^1.7.9",
-    "basic-ftp": "^5.3.1",
+    "basic-ftp": "^6.0.1",
     "dotenv": "^16.4.7",
-    "replicate": "^1.4.0",
+    "form-data": "^4.0.0",
     "ssh2-sftp-client": "^12.1.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250525.0",
+    "@types/node": "^22.15.21",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.16.1"
   }
 }
