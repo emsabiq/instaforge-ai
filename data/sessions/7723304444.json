@@ -2,17 +2,17 @@
   "userId": "7723304444",
   "projectId": "tg-7723304444-1779252663984",
   "baseImageTelegramFileId": "AgACAgUAAxkBAAMMag0-Ngj2pSvPT65h3r7MtQbM2xEAAnQPaxvkkGlUR4CSD7M8ChQBAAMCAAN5AAM7BA",
-  "baseImageLocalPath": "https://ai.emsa.pro/telegram-ai-frame/tg-7723304444-1779252663984/base.jpg",
+  "baseImageLocalPath": "generated/tg-7723304444-1779252663984/inputs/base.jpg",
   "frame1Path": "https://ai.emsa.pro/telegram-ai-frame/tg-7723304444-1779252663984/frame1.jpg",
-  "frame2Path": null,
+  "frame2Path": "https://cdn-magnific.freepik.com/result_SEEDREAM_5_0_EDIT_cf794b3e-20cf-47f4-9b61-df1c7567ced7_0.jpeg?token=exp=1779269723~hmac=5ef9eedf23011b12070eb82ae03631638c676134e47e4380aba0f7f485cfcbe4&size=stable",
   "lastEndFramePath": null,
   "prompt": null,
-  "status": "frame1_ready",
+  "status": "frame2_ready",
   "createdAt": "2026-05-20T04:51:03.984Z",
-  "updatedAt": "2026-05-20T08:09:24.269Z",
+  "updatedAt": "2026-05-20T08:35:54.701Z",
   "frame1Instruction": "tentara sedang melihat peta di hutan, realistis, cinematic, detail wajah tetap mirip foto asli",
-  "frame2Instruction": null,
+  "frame2Instruction": "tentara berdiri di sungai saat senja, realistis, cinematic",
   "outputVideoPath": null,
   "firstFramePath": null,
-  "lastError": null
+  "lastError": "SFTP: getConnection: Timed out while waiting for handshake"
 }
