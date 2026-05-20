@@ -90,7 +90,7 @@ export class MagnificVideoProvider implements VideoProvider {
       const status = this.extractStatus(data)?.toUpperCase();
 
       if (status === "FAILED") {
-        throw new Error("Magnific Happy Horse video job failed");
+        throw new Error(`Magnific Happy Horse video job failed: ${JSON.stringify(data)}`);
       }
 
       const url = this.extractUrl(data);

@@ -27,6 +27,8 @@ export interface Session {
 
   frame1Instruction?: string | null;
   frame2Instruction?: string | null;
+  frame1BaseImageTelegramFileId?: string | null;
+  frame2BaseImageTelegramFileId?: string | null;
   outputVideoPath?: string | null;
   firstFramePath?: string | null;
   lastError?: string | null;

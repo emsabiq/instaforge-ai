@@ -28,6 +28,8 @@ export class JsonSessionStore implements SessionStore {
       updatedAt: now,
       frame1Instruction: null,
       frame2Instruction: null,
+      frame1BaseImageTelegramFileId: null,
+      frame2BaseImageTelegramFileId: null,
       outputVideoPath: null,
       firstFramePath: null,
       lastError: null

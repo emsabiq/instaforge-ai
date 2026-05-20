@@ -145,6 +145,8 @@ export class CommandRouter {
       frame2Path: null,
       frame1Instruction: null,
       frame2Instruction: null,
+      frame1BaseImageTelegramFileId: null,
+      frame2BaseImageTelegramFileId: null,
       status: "base_uploaded",
       lastError: null
     });
@@ -182,6 +184,7 @@ export class CommandRouter {
     };
     patch[`${frameName}Instruction`] = instruction;
     patch[`${frameName}Path`] = null;
+    patch[`${frameName}BaseImageTelegramFileId`] = largest.file_id;
 
     await this.deps.store.updateSession(userId, patch);
     await this.deps.telegram.sendMessage(chatId, `Foto dan instruksi ${frameName} diterima. Membuat frame lewat Magnific...`);
@@ -225,6 +228,7 @@ export class CommandRouter {
     await this.deps.store.updateSession(userId, {
       [`${frameName}Instruction`]: instruction,
       [`${frameName}Path`]: null,
+      [`${frameName}BaseImageTelegramFileId`]: session.baseImageTelegramFileId,
       status: frameName === "frame1" ? "frame1_pending" : "frame2_pending",
       lastError: null
     });
@@ -278,11 +282,14 @@ export class CommandRouter {
     if (!prompt) {
       throw new Error("Prompt video belum tersedia");
     }
+    const frame1ForVideo = await this.frameInputForVideo(userId, session, "frame1", frame1);
+    session = await this.deps.store.getOrCreateSession(userId);
+    const frame2ForVideo = await this.frameInputForVideo(userId, session, "frame2", frame2);
 
     const videoDir = path.join(this.outputRoot, session.projectId, "video");
     const video = await this.deps.videoService.generateVideo({
-      frame1: session.frame1Path && isHttpUrl(session.frame1Path) ? session.frame1Path : frame1,
-      frame2: session.frame2Path && isHttpUrl(session.frame2Path) ? session.frame2Path : frame2,
+      frame1: frame1ForVideo,
+      frame2: frame2ForVideo,
       prompt,
       durationSeconds: 8,
       outputDir: videoDir,
@@ -422,7 +429,7 @@ export class CommandRouter {
     instruction: string
   ): Promise<CreateFrameResponse> {
     const session = await this.deps.store.getOrCreateSession(userId);
-    const baseImage = await this.ensureBaseImageForProvider(userId, session);
+    const baseImage = await this.ensureBaseImageForProvider(userId, session, frameName);
     const response = await this.deps.imageService.createFrameFromBase({
       baseImage,
       instruction,
@@ -487,30 +494,39 @@ export class CommandRouter {
     }
   }
 
-  private async ensureBaseImageForProvider(userId: string, session: Session): Promise<string> {
-    const localPath = await this.ensureBaseImageLocal(userId, session);
-    const upload = await this.deps.uploader.uploadFile(localPath, `${session.projectId}/base.jpg`);
+  private async ensureBaseImageForProvider(userId: string, session: Session, frameName: FrameName): Promise<string> {
+    const localPath = await this.ensureBaseImageLocal(userId, session, frameName);
+    const upload = await this.deps.uploader.uploadFile(localPath, `${session.projectId}/${frameName}-base.jpg`);
 
     if (upload.publicUrl && (await this.isReachable(upload.publicUrl))) {
       await this.deps.store.updateSession(userId, { baseImageLocalPath: upload.publicUrl });
       return upload.publicUrl;
     }
 
-    const telegramUrl = await this.deps.telegram.getFileUrl(session.baseImageTelegramFileId as string);
+    const telegramUrl = await this.deps.telegram.getFileUrl(this.frameBaseFileId(session, frameName));
     return telegramUrl;
   }
 
-  private async ensureBaseImageLocal(userId: string, session: Session): Promise<string> {
-    if (!session.baseImageTelegramFileId) {
-      throw new Error("Foto base belum tersedia");
-    }
+  private async ensureBaseImageLocal(userId: string, session: Session, frameName: FrameName): Promise<string> {
+    const fileId = this.frameBaseFileId(session, frameName);
 
     const projectDir = path.join(this.outputRoot, session.projectId, "inputs");
     await ensureDir(projectDir);
-    const targetPath = path.join(projectDir, "base.jpg");
-    await this.deps.telegram.downloadFile(session.baseImageTelegramFileId, targetPath);
+    const targetPath = path.join(projectDir, `${frameName}-base.jpg`);
+    await this.deps.telegram.downloadFile(fileId, targetPath);
     await this.deps.store.updateSession(userId, { baseImageLocalPath: targetPath });
     return targetPath;
+  }
+
+  private frameBaseFileId(session: Session, frameName: FrameName): string {
+    const frameFileId =
+      frameName === "frame1" ? session.frame1BaseImageTelegramFileId : session.frame2BaseImageTelegramFileId;
+    const fileId = frameFileId || session.baseImageTelegramFileId;
+    if (!fileId) {
+      throw new Error("Foto base belum tersedia");
+    }
+
+    return fileId;
   }
 
   private async materializeFrame(session: Session, frameName: FrameName, framePath: string): Promise<string> {
@@ -520,6 +536,29 @@ export class CommandRouter {
 
     const targetPath = path.join(this.outputRoot, session.projectId, "inputs", `${frameName}.jpg`);
     return this.deps.imageService.materializeImage(framePath, targetPath);
+  }
+
+  private async frameInputForVideo(
+    userId: string,
+    session: Session,
+    frameName: FrameName,
+    localPath: string
+  ): Promise<string> {
+    const storedPath = frameName === "frame1" ? session.frame1Path : session.frame2Path;
+    if (storedPath && isHttpUrl(storedPath) && (await this.isValidImageUrl(storedPath))) {
+      return storedPath;
+    }
+
+    const upload = await this.deps.uploader.uploadFile(localPath, `${session.projectId}/${frameName}.jpg`);
+    if (upload.publicUrl && (await this.isValidImageUrl(upload.publicUrl))) {
+      await this.deps.store.updateSession(userId, {
+        [`${frameName}Path`]: upload.publicUrl,
+        lastError: null
+      });
+      return upload.publicUrl;
+    }
+
+    return localPath;
   }
 
   private statusText(session: Session): string {
@@ -579,5 +618,39 @@ export class CommandRouter {
     } catch {
       return false;
     }
+  }
+
+  private async isValidImageUrl(url: string): Promise<boolean> {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        return false;
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      return this.isValidImageBuffer(buffer);
+    } catch {
+      return false;
+    }
+  }
+
+  private isValidImageBuffer(buffer: Buffer): boolean {
+    if (buffer.length < 1024) {
+      return false;
+    }
+
+    const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    const isPng =
+      buffer[0] === 0x89 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x4e &&
+      buffer[3] === 0x47 &&
+      buffer[4] === 0x0d &&
+      buffer[5] === 0x0a &&
+      buffer[6] === 0x1a &&
+      buffer[7] === 0x0a;
+    const isWebp = buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
+
+    return isJpeg || isPng || isWebp;
   }
 }
