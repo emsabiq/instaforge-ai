@@ -1,7 +1,7 @@
 {
   "userId": "7723304444",
   "projectId": "tg-7723304444-1779252663984",
-  "baseImageTelegramFileId": "AgACAgUAAxkBAAMRag0-jTDBkFOLD-QmQJ_2x8d0fyUAAnUPaxvkkGlUfGEymWYJ0EYBAAMCAAN5AAM7BA",
+  "baseImageTelegramFileId": "AgACAgUAAxkBAAMiag1Bcbc_wo5rlezISI6pWT4MsYkAAnsPaxvkkGlU5j9cqoaxJ5gBAAMCAAN5AAM7BA",
   "baseImageLocalPath": null,
   "frame1Path": null,
   "frame2Path": null,
@@ -9,7 +9,7 @@
   "prompt": null,
   "status": "base_uploaded",
   "createdAt": "2026-05-20T04:51:03.984Z",
-  "updatedAt": "2026-05-20T05:01:07.698Z",
+  "updatedAt": "2026-05-20T05:07:42.585Z",
   "frame1Instruction": null,
   "frame2Instruction": null,
   "outputVideoPath": null,
