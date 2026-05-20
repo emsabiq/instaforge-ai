@@ -2,7 +2,7 @@ import axios from "axios";
 import path from "node:path";
 import { writeFile } from "node:fs/promises";
 import { ensureDir } from "../utils/fs.js";
-import { downloadToFile, isHttpUrl } from "../utils/http.js";
+import { isHttpUrl } from "../utils/http.js";
 import type {
   CreateFrameOptions,
   EnhanceImageOptions,
@@ -17,6 +17,7 @@ interface MagnificImageProviderConfig {
 
 const frameEndpoint = "/text-to-image/seedream-v5-lite-edit";
 const enhanceEndpoint = "/image-upscaler-precision-v2";
+const minimumImageBytes = 1024;
 
 export class MagnificImageProvider implements ImageProvider {
   private readonly apiKey?: string;
@@ -141,7 +142,58 @@ export class MagnificImageProvider implements ImageProvider {
       throw new Error("Magnific response did not include a downloadable image");
     }
 
-    await downloadToFile(url, outputPath);
+    await this.downloadGeneratedImage(url, outputPath);
+  }
+
+  private async downloadGeneratedImage(url: string, outputPath: string): Promise<void> {
+    let lastError = "unknown error";
+
+    for (let attempt = 1; attempt <= 12; attempt += 1) {
+      try {
+        const response = await fetch(url, {
+          headers: {
+            accept: "image/avif,image/webp,image/png,image/jpeg,image/*,*/*;q=0.8"
+          }
+        });
+        const contentType = response.headers.get("content-type") || "unknown";
+        const buffer = Buffer.from(await response.arrayBuffer());
+
+        if (!response.ok) {
+          lastError = `HTTP ${response.status} ${response.statusText}`;
+        } else if (!this.isValidImageBuffer(buffer)) {
+          lastError = `invalid image payload: ${buffer.length} bytes, content-type ${contentType}`;
+        } else {
+          await writeFile(outputPath, buffer);
+          return;
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+
+    throw new Error(`Magnific generated image was not downloadable: ${lastError}`);
+  }
+
+  private isValidImageBuffer(buffer: Buffer): boolean {
+    if (buffer.length < minimumImageBytes) {
+      return false;
+    }
+
+    const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    const isPng =
+      buffer[0] === 0x89 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x4e &&
+      buffer[3] === 0x47 &&
+      buffer[4] === 0x0d &&
+      buffer[5] === 0x0a &&
+      buffer[6] === 0x1a &&
+      buffer[7] === 0x0a;
+    const isWebp = buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
+
+    return isJpeg || isPng || isWebp;
   }
 
   private async imageInput(image: string): Promise<string> {
