@@ -85,5 +85,6 @@ jobs:
             echo "No session changes to commit."
           else
             git commit -m "Persist Telegram session state"
+            git pull --rebase origin "${GITHUB_REF_NAME:-main}"
             git push
           fi
