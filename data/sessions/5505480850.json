@@ -1,0 +1,20 @@
+{
+  "userId": "5505480850",
+  "projectId": "tg-5505480850-1787410870241",
+  "baseImageTelegramFileId": null,
+  "baseImageLocalPath": null,
+  "frame1Path": null,
+  "frame2Path": null,
+  "lastEndFramePath": null,
+  "prompt": null,
+  "status": "error",
+  "createdAt": "2026-08-22T15:01:10.241Z",
+  "updatedAt": "2026-08-22T15:01:10.242Z",
+  "frame1Instruction": null,
+  "frame2Instruction": null,
+  "frame1BaseImageTelegramFileId": null,
+  "frame2BaseImageTelegramFileId": null,
+  "outputVideoPath": null,
+  "firstFramePath": null,
+  "lastError": "Forbidden: bot was blocked by the user"
+}
